@@ -336,6 +336,7 @@
 <body>
 <div class="app">
   <header>ギター練習</header>
+  <p style="font-size:12px;color:var(--text-secondary);padding:0.4rem 1.25rem 0;line-height:1.6;">ギタリストのための練習サポートアプリ。高精度メトロノームと練習曲の管理が無料で使えます。</p>
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('metro', this)">
@@ -397,9 +398,37 @@
   <div id="songs" class="section">
     <p class="section-title">練習曲リスト</p>
     <div id="song-list"></div>
-    <button class="add-song" onclick="openModal()">
-      <i class="ti ti-plus"></i> 練習曲を追加
-    </button>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="add-song" onclick="openPresetModal()" style="flex:1;">
+        <i class="ti ti-search"></i> 曲名から追加
+      </button>
+      <button class="add-song" onclick="openModal()" style="flex:1;">
+        <i class="ti ti-edit"></i> 手動で追加
+      </button>
+    </div>
+  </div>
+</div>
+
+  <footer style="margin-top:auto;padding:1.5rem 1.25rem;border-top:0.5px solid var(--border);font-size:12px;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <span>© 2026 はるかわ</span>
+    <div style="display:flex;gap:12px;">
+      <a href="privacy.html" style="color:var(--text-secondary);text-decoration:none;">プライバシーポリシー</a>
+      <a href="terms.html" style="color:var(--text-secondary);text-decoration:none;">利用規約</a>
+    </div>
+  </footer>
+</div>
+
+<!-- プリセット検索モーダル -->
+<div class="modal-overlay" id="preset-modal">
+  <div class="modal">
+    <div class="modal-title">曲名から追加</div>
+    <div class="input-row">
+      <input type="text" id="preset-search" placeholder="曲名・アーティスト名で検索…" oninput="filterPresets(this.value)" style="width:100%;padding:8px 10px;border-radius:8px;border:0.5px solid var(--border-hover);background:var(--bg);color:var(--text);font-size:14px;">
+    </div>
+    <div id="preset-list" style="max-height:320px;overflow-y:auto;"></div>
+    <div class="modal-btns">
+      <button class="btn" style="flex:1" onclick="closePresetModal()">閉じる</button>
+    </div>
   </div>
 </div>
 
@@ -692,6 +721,71 @@
   document.getElementById('modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
+  document.getElementById('preset-modal').addEventListener('click', function(e) {
+    if (e.target === this) closePresetModal();
+  });
+
+  // --- プリセットデータ ---
+  const PRESETS = [
+    { title: 'Let It Be', artist: 'Beatles', bpm: 73, sig: 4, yt: '' },
+    { title: 'Wonderwall', artist: 'Oasis', bpm: 87, sig: 4, yt: '' },
+    { title: 'Hotel California', artist: 'Eagles', bpm: 75, sig: 6, yt: '' },
+    { title: "Knockin' on Heaven's Door", artist: 'Bob Dylan', bpm: 68, sig: 4, yt: '' },
+    { title: 'Wish You Were Here', artist: 'Pink Floyd', bpm: 60, sig: 4, yt: '' },
+    { title: 'House of the Rising Sun', artist: 'The Animals', bpm: 80, sig: 6, yt: '' },
+    { title: 'Stairway to Heaven', artist: 'Led Zeppelin', bpm: 82, sig: 4, yt: '' },
+    { title: 'Blackbird', artist: 'Beatles', bpm: 96, sig: 3, yt: '' },
+    { title: 'Tears in Heaven', artist: 'Eric Clapton', bpm: 80, sig: 4, yt: '' },
+    { title: 'More Than Words', artist: 'Extreme', bpm: 72, sig: 4, yt: '' },
+    { title: 'Wake Me Up When September Ends', artist: 'Green Day', bpm: 104, sig: 4, yt: '' },
+    { title: 'Behind Blue Eyes', artist: 'The Who', bpm: 72, sig: 4, yt: '' },
+    { title: 'Fast Car', artist: 'Tracy Chapman', bpm: 100, sig: 4, yt: '' },
+    { title: 'The House That Built Me', artist: 'Miranda Lambert', bpm: 76, sig: 4, yt: '' },
+    { title: 'Dust in the Wind', artist: 'Kansas', bpm: 100, sig: 4, yt: '' },
+  ];
+
+  function openPresetModal() {
+    document.getElementById('preset-modal').classList.add('open');
+    document.getElementById('preset-search').value = '';
+    filterPresets('');
+    document.getElementById('preset-search').focus();
+  }
+
+  function closePresetModal() {
+    document.getElementById('preset-modal').classList.remove('open');
+  }
+
+  function filterPresets(query) {
+    const q = query.toLowerCase();
+    const filtered = PRESETS.filter(p =>
+      p.title.toLowerCase().includes(q) || p.artist.toLowerCase().includes(q)
+    );
+    const list = document.getElementById('preset-list');
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);padding:12px 0;">見つかりませんでした</p>';
+      return;
+    }
+    list.innerHTML = filtered.map((p, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--border);">
+        <div>
+          <div style="font-size:14px;font-weight:500;">${p.title}</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${p.artist} · ${p.bpm} BPM · ${p.sig}/4</div>
+        </div>
+        <button class="btn" style="flex:none;padding:6px 12px;font-size:12px;" onclick="addPreset(${PRESETS.indexOf(p)})">追加</button>
+      </div>
+    `).join('');
+  }
+
+  function addPreset(i) {
+    const p = PRESETS[i];
+    const songs = loadSongs();
+    const already = songs.some(s => s.title === p.title && s.artist === p.artist);
+    if (already) { alert('すでに追加されています'); return; }
+    songs.push({ title: p.title, artist: p.artist, bpm: p.bpm, sig: p.sig, yt: p.yt, memo: '' });
+    saveSongs(songs);
+    closePresetModal();
+    renderSongList();
+  }
 
   // --- 初期化 ---
   renderBeats();
