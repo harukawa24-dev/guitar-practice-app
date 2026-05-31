@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ギター練習アプリ</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f5f5f4;
+      --text: #1a1a1a;
+      --text-secondary: #6b7280;
+      --border: rgba(0,0,0,0.12);
+      --border-hover: rgba(0,0,0,0.25);
+      --accent: #1D9E75;
+      --accent-dark: #0F6E56;
+      --purple: #534AB7;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --bg-secondary: #2c2c2e;
+        --text: #f5f5f5;
+        --text-secondary: #8e8e93;
+        --border: rgba(255,255,255,0.12);
+        --border-hover: rgba(255,255,255,0.25);
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 420px;
+      margin: 0 auto;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1rem 1.25rem 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 0.5px solid var(--border);
+      margin: 0.75rem 0 0;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    .tab.active {
+      color: var(--text);
+      border-bottom-color: var(--text);
+      font-weight: 500;
+    }
+
+    .section { display: none; padding: 1.25rem; }
+    .section.active { display: block; }
+
+    /* メトロノーム */
+    .bpm-display {
+      text-align: center;
+      margin: 1.5rem 0 1rem;
+    }
+
+    .bpm-num {
+      font-size: 80px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .bpm-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .beat-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 1.25rem 0;
+    }
+
+    .beat-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border-hover);
+      transition: background .05s;
+    }
+
+    .beat-dot.active { background: var(--accent); border-color: var(--accent-dark); }
+    .beat-dot.accent-dot { background: var(--purple); border-color: #3C3489; }
+
+    .time-sig {
+      display: flex;
+      gap: 8px;
+      margin: 1rem 0;
+    }
+
+    .sig-btn {
+      flex: 1;
+      padding: 8px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+    }
+
+    .sig-btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .slider-row { margin: 1rem 0; }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=range] { width: 100%; accent-color: var(--accent); height: 36px; }
+    
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin: 1.25rem 0;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 8px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background .15s;
+    }
+
+    .btn:hover { background: var(--bg-secondary); }
+
+    .btn.primary {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .btn.primary:hover { opacity: .85; }
+    .btn.stop { border-color: #e24b4a; color: #e24b4a; background: var(--bg); }
+
+
+
+    /* 練習曲 */
+    .section-title {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    .card:hover { border-color: var(--border-hover); }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 0.5px solid var(--border);
+    }
+
+    .card-memo {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .yt-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: #e24b4a;
+      text-decoration: none;
+      margin-top: 6px;
+    }
+
+    .add-song {
+      border: 0.5px dashed var(--border-hover);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 4px;
+      background: none;
+      width: 100%;
+      transition: background .15s;
+    }
+
+    .add-song:hover { background: var(--bg-secondary); }
+
+    /* モーダル */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--bg);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .input-row { margin-bottom: 12px; }
+
+    .input-row label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .input-row input,
+    .input-row textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-hover);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .input-row textarea { min-height: 72px; }
+
+    .modal-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>ギター練習</header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('metro', this)">
+      <i class="ti ti-metronome"></i> メトロノーム
+    </button>
+    <button class="tab" onclick="switchTab('songs', this)">
+      <i class="ti ti-music"></i> 練習曲
+    </button>
+  </div>
+
+  <!-- メトロノーム -->
+  <div id="metro" class="section active">
+    <div id="song-info" style="display:none;margin-bottom:1rem;padding:0.75rem 1rem;background:var(--bg-secondary);border-radius:var(--radius-md);">
+      <div id="song-info-title" style="font-size:15px;font-weight:500;margin-bottom:4px;"></div>
+      <a id="song-info-yt" href="#" target="_blank" style="display:none;font-size:12px;color:#e24b4a;text-decoration:none;align-items:center;gap:4px;">
+        <i class="ti ti-brand-youtube"></i> YouTubeで開く
+      </a>
+    </div>
+    <div class="bpm-display">
+      <input type="number" id="bpm-display" value="120" min="40" max="240"
+             style="font-size:80px;font-weight:500;line-height:1;color:var(--text);background:none;border:none;text-align:center;width:100%;outline:none;-moz-appearance:textfield;appearance:textfield;"
+             onblur="setBpm(parseInt(this.value)||120)"
+             onkeydown="if(event.key==='Enter'){setBpm(parseInt(this.value)||120);this.blur()}">
+      <div class="bpm-label">BPM</div>
+    </div>
+
+    <div class="beat-row" id="beat-row"></div>
+
+    <div class="time-sig">
+      <button class="sig-btn active" onclick="setTimeSig(2, this)">2/4</button>
+      <button class="sig-btn" onclick="setTimeSig(3, this)">3/4</button>
+      <button class="sig-btn" onclick="setTimeSig(4, this)">4/4</button>
+      <button class="sig-btn" onclick="setTimeSig(6, this)">6/8</button>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span>テンポ</span>
+        <span id="bpm-val">120 BPM</span>
+      </div>
+      <input type="range" min="40" max="240" value="120" step="1" id="bpm-slider"
+             oninput="setBpm(parseInt(this.value))">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="changeBpm(-5)">−5</button>
+      <button class="btn" onclick="changeBpm(-1)">−1</button>
+      <button class="btn primary" id="play-btn" onclick="togglePlay()">
+        <i class="ti ti-player-play"></i> スタート
+      </button>
+      <button class="btn" onclick="changeBpm(1)">+1</button>
+      <button class="btn" onclick="changeBpm(5)">+5</button>
+    </div>
+
+
+  </div>
+
+  <!-- 練習曲 -->
+  <div id="songs" class="section">
+    <p class="section-title">練習曲リスト</p>
+    <div id="song-list"></div>
+    <button class="add-song" onclick="openModal()">
+      <i class="ti ti-plus"></i> 練習曲を追加
+    </button>
+  </div>
+</div>
+
+<!-- 追加モーダル -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">練習曲を追加</div>
+    <div class="input-row">
+      <label>曲名</label>
+      <input type="text" id="f-title" placeholder="例：Let It Be">
+    </div>
+    <div class="input-row">
+      <label>BPM</label>
+      <input type="number" id="f-bpm" value="120" min="40" max="240">
+    </div>
+    <div class="input-row">
+      <label>拍子</label>
+      <select id="f-sig" style="width:100%;padding:8px 10px;border-radius:8px;border:0.5px solid var(--border-hover);background:var(--bg);color:var(--text);font-size:14px;">
+        <option value="2">2/4</option>
+        <option value="3">3/4</option>
+        <option value="4" selected>4/4</option>
+        <option value="6">6/8</option>
+      </select>
+    </div>
+    <div class="input-row">
+      <label>YouTubeリンク（任意）</label>
+      <input type="url" id="f-yt" placeholder="https://youtube.com/...">
+    </div>
+    <div class="input-row">
+      <label>メモ（任意）</label>
+      <textarea id="f-memo" placeholder="練習のポイントなど"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" style="flex:1" onclick="closeModal()">キャンセル</button>
+      <button class="btn primary" style="flex:2" id="modal-save-btn" onclick="saveSong()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- 状態 ---
+  let bpm = 120, beats = 4, playing = false, currentBeat = 0;
+  let intervalId = null, audioCtx = null;
+
+
+  // --- localStorage ---
+  function loadSongs() {
+    try { return JSON.parse(localStorage.getItem('songs') || '[]'); } catch { return []; }
+  }
+
+  function saveSongs(songs) {
+    localStorage.setItem('songs', JSON.stringify(songs));
+  }
+
+  // --- 音声 ---
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playClick(accent) {
+    initAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.frequency.value = accent ? 1000 : 660;
+    g.gain.setValueAtTime(accent ? 0.6 : 0.35, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    o.start();
+    o.stop(audioCtx.currentTime + 0.08);
+  }
+
+  // --- ビート表示 ---
+  function renderBeats() {
+    const row = document.getElementById('beat-row');
+    row.innerHTML = '';
+    for (let i = 0; i < beats; i++) {
+      const d = document.createElement('div');
+      d.className = 'beat-dot' + (i === 0 ? ' accent-dot' : '');
+      d.id = 'dot-' + i;
+      row.appendChild(d);
+    }
+  }
+
+  function tick() {
+    document.querySelectorAll('.beat-dot').forEach((d, i) => {
+      d.classList.remove('active', 'accent-dot');
+      if (i === 0) d.classList.add('accent-dot');
+      if (i === currentBeat) d.classList.add('active');
+    });
+    playClick(currentBeat === 0);
+    currentBeat = (currentBeat + 1) % beats;
+  }
+
+  // --- 再生制御 ---
+  function togglePlay() {
+    playing = !playing;
+    const btn = document.getElementById('play-btn');
+    if (playing) {
+      initAudio();
+      currentBeat = 0;
+      tick();
+      intervalId = setInterval(tick, 60000 / bpm);
+      btn.innerHTML = '<i class="ti ti-player-pause"></i> ストップ';
+      btn.classList.remove('primary');
+      btn.classList.add('stop');
+    } else {
+      clearInterval(intervalId);
+      document.querySelectorAll('.beat-dot').forEach(d => d.classList.remove('active'));
+      btn.innerHTML = '<i class="ti ti-player-play"></i> スタート';
+      btn.classList.add('primary');
+      btn.classList.remove('stop');
+    }
+  }
+
+  function setBpm(v) {
+    bpm = Math.min(240, Math.max(40, v));
+    document.getElementById('bpm-display').value = bpm;
+    document.getElementById('bpm-val').textContent = bpm + ' BPM';
+    document.getElementById('bpm-slider').value = bpm;
+    if (playing) {
+      clearInterval(intervalId);
+      intervalId = setInterval(tick, 60000 / bpm);
+    }
+  }
+
+  function changeBpm(delta) { setBpm(bpm + delta); }
+
+  function setTimeSig(n, el) {
+    beats = n;
+    document.querySelectorAll('.sig-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderBeats();
+    if (playing) {
+      clearInterval(intervalId);
+      currentBeat = 0;
+      intervalId = setInterval(tick, 60000 / bpm);
+    }
+  }
+
+
+
+  // --- タブ切り替え ---
+  function switchTab(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    el.classList.add('active');
+    if (id === 'songs') renderSongList();
+  }
+
+  // --- 練習曲リスト ---
+  function renderSongList() {
+    const songs = loadSongs();
+    const list = document.getElementById('song-list');
+    list.innerHTML = '';
+    if (songs.length === 0) {
+      list.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">まだ曲がありません</p>';
+      return;
+    }
+    songs.forEach((s, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${s.title}</div>
+          <div style="display:flex;gap:4px;">
+            <button class="btn" style="flex:none;padding:4px 8px;font-size:12px;color:var(--text-secondary)" onclick="openEditModal(${i}, event)">
+              <i class="ti ti-edit"></i>
+            </button>
+            <button class="btn" style="flex:none;padding:4px 8px;font-size:12px;color:var(--text-secondary)" onclick="deleteSong(${i}, event)">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-meta">
+          <span class="pill">${s.bpm} BPM</span>
+          <span class="pill">${s.sig}/4</span>
+          ${s.yt ? `<a class="yt-link" href="${s.yt}" target="_blank"><i class="ti ti-brand-youtube"></i> YouTube</a>` : ''}
+        </div>
+        ${s.memo ? `<div class="card-memo">${s.memo}</div>` : ''}
+      `;
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        loadSongToMetro(s);
+      });
+      list.appendChild(card);
+    });
+  }
+
+  function loadSongToMetro(s) {
+    setBpm(s.bpm);
+    const sigMap = { 2: 0, 3: 1, 4: 2, 6: 3 };
+    const sigBtns = document.querySelectorAll('.sig-btn');
+    setTimeSig(s.sig, sigBtns[sigMap[s.sig] ?? 2]);
+    const info = document.getElementById('song-info');
+    const infoTitle = document.getElementById('song-info-title');
+    const infoYt = document.getElementById('song-info-yt');
+    infoTitle.textContent = s.title;
+    if (s.yt) {
+      infoYt.href = s.yt;
+      infoYt.style.display = 'inline-flex';
+    } else {
+      infoYt.style.display = 'none';
+    }
+    info.style.display = 'block';
+    switchTab('metro', document.querySelectorAll('.tab')[0]);
+  }
+
+  // --- モーダル ---
+  let editIndex = -1;
+
+  function openModal() {
+    editIndex = -1;
+    document.getElementById('modal-title').textContent = '練習曲を追加';
+    document.getElementById('modal-save-btn').textContent = '保存';
+    document.getElementById('modal').classList.add('open');
+    document.getElementById('f-title').focus();
+  }
+
+  function openEditModal(i, e) {
+    e.stopPropagation();
+    const songs = loadSongs();
+    const s = songs[i];
+    editIndex = i;
+    document.getElementById('modal-title').textContent = '練習曲を編集';
+    document.getElementById('modal-save-btn').textContent = '更新';
+    document.getElementById('f-title').value = s.title;
+    document.getElementById('f-bpm').value = s.bpm;
+    document.getElementById('f-sig').value = s.sig;
+    document.getElementById('f-yt').value = s.yt || '';
+    document.getElementById('f-memo').value = s.memo || '';
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    editIndex = -1;
+    document.getElementById('modal').classList.remove('open');
+    ['f-title', 'f-yt', 'f-memo'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('f-bpm').value = '120';
+    document.getElementById('f-sig').value = '4';
+  }
+
+  function saveSong() {
+    const title = document.getElementById('f-title').value.trim();
+    if (!title) { alert('曲名を入力してください'); return; }
+    const songs = loadSongs();
+    const song = {
+      title,
+      bpm: parseInt(document.getElementById('f-bpm').value) || 120,
+      sig: parseInt(document.getElementById('f-sig').value),
+      yt: document.getElementById('f-yt').value.trim(),
+      memo: document.getElementById('f-memo').value.trim(),
+    };
+    if (editIndex >= 0) {
+      songs[editIndex] = song;
+    } else {
+      songs.push(song);
+    }
+    saveSongs(songs);
+    closeModal();
+    renderSongList();
+  }
+
+  function deleteSong(i, e) {
+    e.stopPropagation();
+    if (!confirm('削除しますか？')) return;
+    const songs = loadSongs();
+    songs.splice(i, 1);
+    saveSongs(songs);
+    renderSongList();
+  }
+
+  // モーダル背景クリックで閉じる
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // --- 初期化 ---
+  renderBeats();
+</script>
+</body>
+</html>
