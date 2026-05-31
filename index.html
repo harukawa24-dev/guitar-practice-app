@@ -442,7 +442,7 @@
 <script>
   // --- 状態 ---
   let bpm = 120, beats = 4, playing = false, currentBeat = 0;
-  let intervalId = null, audioCtx = null;
+  let audioCtx = null;
 
 
   // --- localStorage ---
@@ -454,23 +454,49 @@
     localStorage.setItem('songs', JSON.stringify(songs));
   }
 
-  // --- 音声 ---
+  // --- 音声スケジューラー（高精度） ---
+  const LOOKAHEAD = 0.1;      // 先読み時間（秒）
+  const SCHEDULE_INTERVAL = 25; // スケジューラー呼び出し間隔（ms）
+  let nextBeatTime = 0;
+  let schedulerTimer = null;
+
   function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  function playClick(accent) {
-    initAudio();
+  function scheduleClick(time, accent) {
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     o.connect(g);
     g.connect(audioCtx.destination);
     o.frequency.value = accent ? 1000 : 660;
-    g.gain.setValueAtTime(accent ? 0.6 : 0.35, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
-    o.start();
-    o.stop(audioCtx.currentTime + 0.08);
+    g.gain.setValueAtTime(accent ? 0.6 : 0.35, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    o.start(time);
+    o.stop(time + 0.08);
+  }
+
+  function scheduler() {
+    while (nextBeatTime < audioCtx.currentTime + LOOKAHEAD) {
+      const accent = currentBeat === 0;
+      scheduleClick(nextBeatTime, accent);
+      // 視覚更新は少し早めに requestAnimationFrame で行う
+      const beatIndex = currentBeat;
+      const delay = (nextBeatTime - audioCtx.currentTime) * 1000;
+      setTimeout(() => updateBeatVisual(beatIndex), Math.max(0, delay));
+      nextBeatTime += 60.0 / bpm;
+      currentBeat = (currentBeat + 1) % beats;
+    }
+    schedulerTimer = setTimeout(scheduler, SCHEDULE_INTERVAL);
+  }
+
+  function updateBeatVisual(beatIndex) {
+    document.querySelectorAll('.beat-dot').forEach((d, i) => {
+      d.classList.remove('active', 'accent-dot');
+      if (i === 0) d.classList.add('accent-dot');
+      if (i === beatIndex) d.classList.add('active');
+    });
   }
 
   // --- ビート表示 ---
@@ -485,16 +511,6 @@
     }
   }
 
-  function tick() {
-    document.querySelectorAll('.beat-dot').forEach((d, i) => {
-      d.classList.remove('active', 'accent-dot');
-      if (i === 0) d.classList.add('accent-dot');
-      if (i === currentBeat) d.classList.add('active');
-    });
-    playClick(currentBeat === 0);
-    currentBeat = (currentBeat + 1) % beats;
-  }
-
   // --- 再生制御 ---
   function togglePlay() {
     playing = !playing;
@@ -502,13 +518,14 @@
     if (playing) {
       initAudio();
       currentBeat = 0;
-      tick();
-      intervalId = setInterval(tick, 60000 / bpm);
+      nextBeatTime = audioCtx.currentTime;
+      scheduler();
       btn.innerHTML = '<i class="ti ti-player-pause"></i> ストップ';
       btn.classList.remove('primary');
       btn.classList.add('stop');
     } else {
-      clearInterval(intervalId);
+      clearTimeout(schedulerTimer);
+      schedulerTimer = null;
       document.querySelectorAll('.beat-dot').forEach(d => d.classList.remove('active'));
       btn.innerHTML = '<i class="ti ti-player-play"></i> スタート';
       btn.classList.add('primary');
@@ -521,10 +538,6 @@
     document.getElementById('bpm-display').value = bpm;
     document.getElementById('bpm-val').textContent = bpm + ' BPM';
     document.getElementById('bpm-slider').value = bpm;
-    if (playing) {
-      clearInterval(intervalId);
-      intervalId = setInterval(tick, 60000 / bpm);
-    }
   }
 
   function changeBpm(delta) { setBpm(bpm + delta); }
@@ -535,9 +548,8 @@
     el.classList.add('active');
     renderBeats();
     if (playing) {
-      clearInterval(intervalId);
       currentBeat = 0;
-      intervalId = setInterval(tick, 60000 / bpm);
+      nextBeatTime = audioCtx.currentTime;
     }
   }
 
